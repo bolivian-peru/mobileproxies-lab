@@ -1,0 +1,297 @@
+[
+  {
+    "slug": "locale-is-not-proxy-country",
+    "title": "A passing locale test does not prove your proxy changed country",
+    "description": "Run a local Playwright example that separates browser locale, mocked geolocation and an application country label before adding a real proxy.",
+    "date": "2026-11-09",
+    "blocks": [
+      [
+        "p",
+        "A browser can report fr-FR while the application still shows a different country. Our local example makes this distinction visible: it changes the browser locale and checks that the page continues to display FIXTURE as its country. The country is deliberately hard-coded. There is no proxy connection in this test."
+      ],
+      [
+        "p",
+        "That constraint gives the test a narrow job. If it passes, the locale setting reached the browser and the page displayed it. It has not established the country of an exit IP, the accuracy of a geolocation database or the routing used by a production application."
+      ],
+      [
+        "h2",
+        "Run the example before adding credentials"
+      ],
+      [
+        "p",
+        "Clone this repository and run the example with Node.js 22.13 or later. The dependency lockfile pins the Playwright version used for the local checks."
+      ],
+      [
+        "code",
+        "sh",
+        "git clone https://github.com/bolivian-peru/mobileproxies-lab.git\ncd mobileproxies-lab/examples/regional-qa\nnpm ci\nnpx playwright install chromium\nnpm test"
+      ],
+      [
+        "p",
+        "The server listens on 127.0.0.1:47127. Two tests create fresh browser contexts with fr-FR and de-DE locales. Each checks navigator.language through the fixture and confirms that the application country remains FIXTURE. A third test supplies mocked browser coordinates and checks those independently. A fourth, remote test is skipped unless MP_TEST_URL is set."
+      ],
+      [
+        "code",
+        "ts",
+        "const context = await browser.newContext({ locale: 'fr-FR' });\ntry {\n  const page = await context.newPage();\n  await page.goto('http://127.0.0.1:47127/');\n  await expect(page.getByTestId('browser-locale')).toHaveText('fr-FR');\n  await expect(page.getByTestId('country-code')).toHaveText('FIXTURE');\n} finally {\n  await context.close();\n}"
+      ],
+      [
+        "h2",
+        "Give each assertion a source"
+      ],
+      [
+        "p",
+        "The browser locale is a browser setting. Browser geolocation is a separate API whose result depends on permissions and the coordinates supplied by the browser or test environment. An exit IP belongs to the network path of a request. A storefront country is an application decision that may also use a cookie, account setting or selected delivery country."
+      ],
+      [
+        "table",
+        [
+          "Observation",
+          "What this example establishes",
+          "What still needs checking"
+        ],
+        [
+          [
+            "navigator.language is fr-FR",
+            "The context uses the requested locale",
+            "The network exit and application country"
+          ],
+          [
+            "Mocked coordinates match the configured values",
+            "The browser geolocation override works for the permitted origin",
+            "The real location of a network connection"
+          ],
+          [
+            "The fixture country is FIXTURE",
+            "The application label stayed fixed",
+            "How a real application chooses its country"
+          ],
+          [
+            "A remote page shows the expected country",
+            "That page rendered the expected label",
+            "Whether the label was selected from the proxy exit IP"
+          ]
+        ]
+      ],
+      [
+        "p",
+        "Start with a fresh browser context when comparing countries so that one test does not inherit another test's cookies. Keep the target page and account state consistent. Changing the proxy, language, timezone and saved country at once makes a failure harder to attribute."
+      ],
+      [
+        "h2",
+        "Add a real proxy as a separate check"
+      ],
+      [
+        "p",
+        "The remote example reads the proxy server, username and password from separate environment variables. It opens an authorized HTTPS fixture and checks an element named country-code. Before trusting the result as an IP-based regional check, record the actual exit IP from the same proxied context using a diagnostic endpoint you control. A standalone curl request can use a different route and cannot establish what the browser did."
+      ],
+      [
+        "p",
+        "No authenticated remote proxy was used to validate this example. The local checks are reproducible demonstrations of browser inputs. For a real application, also define the expected currency, delivery region, language and regional content, then test the inputs that drive each one."
+      ],
+      [
+        "p",
+        "The [Mobileproxies.org Playwright regional testing guide](https://mobileproxies.org/blog/playwright-geolocation-testing) includes the broader application testing checklist. If the browser is routed correctly but a lookup reports the wrong country, use the [country-mismatch diagnostic guide](https://mobileproxies.org/blog/proxy-location-wrong-country) to compare the same exit address across the relevant signals."
+      ],
+      [
+        "h2",
+        "Reference and source"
+      ],
+      [
+        "p",
+        "Playwright documents [browser emulation settings](https://playwright.dev/docs/emulation) and [HTTP proxy configuration](https://playwright.dev/docs/network#http-proxy) separately. The runnable source is in [examples/regional-qa](https://github.com/bolivian-peru/mobileproxies-lab/tree/main/examples/regional-qa). This article is maintained by Mobileproxies.org, which sells mobile proxy services."
+      ]
+    ]
+  },
+  {
+    "slug": "curl-no-proxy-routing",
+    "title": "Why curl can bypass an explicitly configured proxy",
+    "description": "A short local demonstration of NO_PROXY overriding curl proxy selection, plus a checklist for comparing browser and command-line requests.",
+    "date": "2026-11-09",
+    "blocks": [
+      [
+        "p",
+        "Adding --proxy to a curl command does not guarantee that the request uses that proxy. A matching NO_PROXY exclusion can send it directly. This is easy to miss when a shell, container or CI environment already defines exclusions."
+      ],
+      [
+        "p",
+        "The example below creates a destination handler and a proxy handler on random loopback ports. Both return a different label. It runs the same target URL twice: once with NO_PROXY=*, then with the command-line exclusion list explicitly cleared. Nothing leaves the computer."
+      ],
+      [
+        "code",
+        "sh",
+        "python3 examples/curl-routing-demo.py"
+      ],
+      [
+        "p",
+        "The expected output is:"
+      ],
+      [
+        "code",
+        "text",
+        "NO_PROXY=*: direct-handler\nNO_PROXY=* with --noproxy \"\": proxy-handler\nPASS: both routing decisions matched the expected handler.\nThis HTTP fixture does not forward traffic or test real proxy authentication."
+      ],
+      [
+        "p",
+        "The proxy handler is a stand-in. It answers the HTTP request itself, so this demonstration proves which handler curl selected. It does not implement HTTPS CONNECT, forward requests to another server or validate a paid proxy account."
+      ],
+      [
+        "h2",
+        "Make the comparison explicit"
+      ],
+      [
+        "p",
+        "The example uses a clean child-process environment for proxy-selection variables and places -q first in the curl arguments to avoid reading a default curl configuration file. It keeps NO_PROXY=* set in both runs. The second run adds --noproxy with an empty value. The different result is therefore attributable to the exclusion override."
+      ],
+      [
+        "code",
+        "sh",
+        "# Proxy host and fixture URL are placeholders.\n# This exclusion applies to every host.\nNO_PROXY='*' curl -q --proxy http://proxy.example:8080 \\\n  http://fixture.example/status\n\n# Explicitly clear the exclusion list for this request.\nNO_PROXY='*' curl -q --proxy http://proxy.example:8080 \\\n  --noproxy '' http://fixture.example/status"
+      ],
+      [
+        "p",
+        "Real proxy credentials should be supplied through your existing secret-handling setup. Do not paste a username and password into a shared command transcript. Check whether both uppercase and lowercase proxy variables are present; curl treats http_proxy specially and only accepts its lowercase form. The official curl documentation explains the precedence and exclusions."
+      ],
+      [
+        "h2",
+        "Compare the actual clients"
+      ],
+      [
+        "p",
+        "A browser extension can route the browser while a Node.js process, Python client or container uses a separate configuration. A successful browser request is useful evidence about that browser request. It does not verify the route of a different program."
+      ],
+      [
+        "list",
+        [
+          "Use the same authorized target URL in both clients and note whether either follows redirects.",
+          "Record which process owns the proxy setting: the browser, application client, shell environment or container.",
+          "Check matching exclusions before replacing credentials or changing the proxy endpoint.",
+          "Confirm the exit IP from each client through a diagnostic endpoint you control. Compare the address actually observed, not only the configured hostname.",
+          "Separate proxy authentication errors from destination responses. An HTTP 407 concerns proxy authentication; a destination response needs its own context."
+        ]
+      ],
+      [
+        "p",
+        "Keep failures in the comparison. A timeout, a direct request and a successful proxied request are three different outcomes. Hiding failed runs can make a configuration appear reliable when it is only intermittently used."
+      ],
+      [
+        "p",
+        "The [browser-versus-code proxy checklist](https://mobileproxies.org/blog/proxy-works-in-browser-not-in-code) provides a worksheet for these comparisons. The [general proxy testing guide](https://mobileproxies.org/blog/how-to-test-a-proxy) covers the evidence to collect before attributing a problem to a provider."
+      ],
+      [
+        "h2",
+        "Reference and source"
+      ],
+      [
+        "p",
+        "See curl's [proxy environment variable documentation](https://everything.curl.dev/usingcurl/proxies/env.html) and [command-line reference](https://curl.se/docs/manpage.html). The complete [local routing demonstration](https://github.com/bolivian-peru/mobileproxies-lab/blob/main/examples/curl-routing-demo.py) includes assertions and closes both servers when it finishes. Mobileproxies.org maintains this example and sells mobile proxy services."
+      ]
+    ]
+  },
+  {
+    "slug": "reading-curl-proxy-timings",
+    "title": "Read curl timings without calling everything proxy latency",
+    "description": "Record curl timing milestones and failures consistently, distinguish connection and transfer measurements, and avoid claiming a proxy benchmark from a single page load.",
+    "date": "2026-11-09",
+    "blocks": [
+      [
+        "p",
+        "A two-second request through a proxy is a two-second request. That number alone does not identify how much time was spent on the proxy connection, the destination or downloading the response. Start by recording the request configuration and curl's timing milestones together."
+      ],
+      [
+        "p",
+        "This repository includes a write-out format that emits response status, connection timings, response size and average download speed as JSON. The example is a collection format, not a published provider benchmark."
+      ],
+      [
+        "h2",
+        "Record the same fields for each attempt"
+      ],
+      [
+        "p",
+        "Use a stable HTTPS fixture you own or are authorized to test. Put the proxy settings in an ignored configuration file with restricted permissions, populated through your normal secret workflow. The example filename proxy.curlrc is ignored by this repository. Keep credentials out of the destination URL."
+      ],
+      [
+        "code",
+        "sh",
+        "chmod 600 proxy.curlrc\ncurl -q --config proxy.curlrc \\\n  --noproxy '' --silent --show-error \\\n  --connect-timeout 10 --max-time 30 \\\n  --output /dev/null \\\n  --write-out @examples/curl-timing-format.txt \\\n  https://your-authorized-fixture.example/status\ncurl_status=$?\nprintf 'curl_exit_code=%s\\n' \"$curl_status\""
+      ],
+      [
+        "p",
+        "The configuration file should contain only the intended proxy settings. Do not add verbose tracing, saved response bodies or redirects without considering what they change or expose. The shell variable captures the exit status immediately after curl; the JSON response code by itself is not enough to classify every failed transfer."
+      ],
+      [
+        "h2",
+        "Interpret the fields as milestones"
+      ],
+      [
+        "table",
+        [
+          "Field in the format",
+          "How to read it"
+        ],
+        [
+          [
+            "dns_s",
+            "Elapsed time to the name-resolution milestone. The name resolved depends on the proxy protocol and route."
+          ],
+          [
+            "connect_s",
+            "Elapsed time to the connection milestone. With an explicit proxy, the connection can be to the proxy rather than the origin."
+          ],
+          [
+            "tls_s",
+            "Elapsed time to the TLS handshake milestone for a supported secure transfer. A zero value is not proof of a zero-cost handshake."
+          ],
+          [
+            "first_byte_s",
+            "Elapsed time to the first response byte, including preceding setup and server work."
+          ],
+          [
+            "total_s",
+            "Elapsed time for the full operation, including transfer of the response."
+          ],
+          [
+            "download_bytes_per_second",
+            "Average download speed reported by curl, in bytes per second, not megabits per second."
+          ],
+          [
+            "remote_ip",
+            "The peer curl connected to. In a proxied request this can be the proxy endpoint, not the internet exit IP visible to the destination."
+          ]
+        ]
+      ],
+      [
+        "p",
+        "Most timing values above are cumulative. Adding them together double-counts earlier stages. Subtracting milestones can help investigate a simple, fresh connection, but a redirect chain, reused connection or another protocol arrangement changes what the differences mean. Record those conditions before comparing runs."
+      ],
+      [
+        "h2",
+        "Keep the destination and failures in the result"
+      ],
+      [
+        "p",
+        "A small HTML response and a large download answer different questions. A remote endpoint that caches responses also differs from an application doing database work. Hold the fixture, response size, client version and connection policy steady when comparing two routes. Run modest, sequential samples rather than increasing concurrency without a defined need."
+      ],
+      [
+        "p",
+        "Record timeouts and non-success HTTP responses alongside successful runs. Report the number of attempts and the failure rate before describing a typical successful duration. A handful of samples can help reproduce a symptom, but it is too little evidence for broad claims about carrier speed or reliability."
+      ],
+      [
+        "p",
+        "To establish the exit IP, use the address observed by an authorized destination. The remote_ip field in this format has a different job: it identifies curl's connected peer. Confusing the two can lead to a misleading country or latency conclusion."
+      ],
+      [
+        "p",
+        "The [mobile proxy speed-testing guide](https://mobileproxies.org/blog/mobile-proxy-speed-test) includes a worksheet for recording the test conditions and outcomes. Use the [capacity-planning guide](https://mobileproxies.org/blog/mobile-proxy-capacity-planning) when the question is how many concurrent jobs a workload can sustain."
+      ],
+      [
+        "h2",
+        "Reference and source"
+      ],
+      [
+        "p",
+        "curl documents [write-out formatting](https://everything.curl.dev/usingcurl/verbose/writeout.html) and the [individual timing variables](https://curl.se/docs/manpage.html). The format file is [available in this repository](https://github.com/bolivian-peru/mobileproxies-lab/blob/main/examples/curl-timing-format.txt). Mobileproxies.org maintains the lab and sells mobile proxy services. No real carrier speed measurement is claimed here."
+      ]
+    ]
+  }
+]

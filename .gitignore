@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.local
+proxy.curlrc
+test-results/
+playwright-report/
+__pycache__/
+.DS_Store

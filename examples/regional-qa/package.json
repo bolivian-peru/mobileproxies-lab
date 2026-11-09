@@ -1,0 +1,8 @@
+{
+  "name": "mobileproxies-regional-qa-starter",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": { "test": "playwright test", "fixture": "node fixture.mjs" },
+  "devDependencies": { "@playwright/test": "1.64.1" },
+  "engines": { "node": ">=22.13.0" }
+}

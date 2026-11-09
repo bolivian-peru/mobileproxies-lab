@@ -1,0 +1,1 @@
+{"http_code":"%{http_code}","remote_ip":"%{remote_ip}","dns_s":%{time_namelookup},"connect_s":%{time_connect},"tls_s":%{time_appconnect},"first_byte_s":%{time_starttransfer},"total_s":%{time_total},"download_bytes":%{size_download},"download_bytes_per_second":%{speed_download}}\n
